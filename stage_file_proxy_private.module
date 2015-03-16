@@ -2,8 +2,8 @@
 /**
  * @file
  *
+ *
  * @todo:
- * - at least basic security!
  * - documentation
  */
 
@@ -32,16 +32,15 @@ function stage_file_proxy_private_menu_alter(&$items) {
  */
 function stage_file_proxy_private_file_download_proxy() {
   $args = func_get_args();
-  $tmp_args = $args;
-  $scheme = array_shift($args);
-  $target = implode('/', $args);
-  $uri = $scheme . '://' . $target;
   // Download file to private filesystem.
-  call_user_func_array('stage_file_proxy_private_download', $tmp_args);
+  call_user_func_array('stage_file_proxy_private_download', $args);
   // Deliver as usually.
-  call_user_func_array('file_download', $tmp_args);
+  call_user_func_array('file_download', $args);
 }
 
+/**
+ * Retrieve file from external host.
+ */
 function stage_file_proxy_private_download() {
   $args = func_get_args();
   $scheme = array_shift($args);
@@ -68,6 +67,9 @@ function stage_file_proxy_private_download() {
   }
 }
 
+/**
+ * Settings form.
+ */
 function stage_file_proxy_private_settings_form($form, &$form_state) {
   $form['stage_file_proxy_private_ssh_host'] = array(
     '#type' => 'textfield',
