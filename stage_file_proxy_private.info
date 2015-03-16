@@ -1,3 +1,5 @@
 name = Stage File Proxy Private
 description = Proxies private files from production server so you don't have to transfer them manually
 core = 7.x
+
+dependencies[] = stage_file_proxy
