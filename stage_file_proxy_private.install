@@ -1,0 +1,16 @@
+<?php
+/**
+ * @file
+ * Remove variables on module disable.
+ */
+
+/**
+ * Implements hook_disable().
+ */
+function stage_file_proxy_private_disable() {
+  variable_del('stage_file_proxy_private_ssh_host');
+  variable_del('stage_file_proxy_private_ssh_port');
+  variable_del('stage_file_proxy_private_ssh_username');
+  variable_del('stage_file_proxy_private_ssh_password');
+  variable_del('stage_file_proxy_private_ssh_path');
+}
