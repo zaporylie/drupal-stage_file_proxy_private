@@ -23,6 +23,24 @@ function stage_file_proxy_private_menu() {
  */
 function stage_file_proxy_private_menu_alter(&$items) {
   $items['system/files']['page callback'] = 'stage_file_proxy_private_file_download_proxy';
+  $items['system/files/styles/%image_style']['page callback'] = 'stage_file_proxy_private_image_style_delivery_proxy';
+}
+
+/**
+ * Download file before triggering image_style_deliver callback.
+ */
+function stage_file_proxy_private_image_style_delivery_proxy($style, $scheme) {
+  // Check that the style is defined and the scheme is valid.
+  if (!$style || !file_stream_wrapper_valid_scheme($scheme)) {
+    drupal_exit();
+  }
+  $args = func_get_args();
+  $tmp_args = $args;
+  array_shift($tmp_args);
+  // Download file to private filesystem.
+  call_user_func_array('stage_file_proxy_private_download', $tmp_args);
+  // Deliver as usually.
+  call_user_func_array('image_style_deliver', $args);
 }
 
 /**
