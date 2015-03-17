@@ -2,9 +2,6 @@
 /**
  * @file
  *
- *
- * @todo:
- * - documentation
  */
 
 /**
@@ -12,6 +9,7 @@
  */
 function stage_file_proxy_private_menu() {
   $items['admin/config/media/stage_file_proxy_private'] = array(
+    'title' => 'Stage File Proxy Private',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('stage_file_proxy_private_settings_form'),
     'access arguments' => array('administer stage_file_proxy settings'),
@@ -49,21 +47,33 @@ function stage_file_proxy_private_download() {
   $filename = array_pop($args);
   $target_dir = $scheme . '://' . implode('/', $args);
 
-  if (file_stream_wrapper_valid_scheme($scheme) && !file_exists($uri)) {
-    // Transfer file from production.
-    if (!file_prepare_directory($target_dir, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
-      drupal_set_message(t('Unable to create directory'), 'error');
-      return FALSE;
-    }
-    if (!($connection = ssh2_connect(variable_get('stage_file_proxy_private_ssh_host'), variable_get('stage_file_proxy_private_ssh_port')))) {
-      return FALSE;
-    }
-    if (!ssh2_auth_password($connection, variable_get('stage_file_proxy_private_ssh_username'), variable_get('stage_file_proxy_private_ssh_password'))) {
-      return FALSE;
-    }
-    if (!ssh2_scp_recv($connection, variable_get('stage_file_proxy_private_ssh_remote_path') . '/' . $target, drupal_realpath($uri))) {
-      return FALSE;
-    }
+  // Check if file has correct schema.
+  if (!file_stream_wrapper_valid_scheme($scheme)) {
+    return FALSE;
+  }
+  // Check if file doesn't exist already.
+  if (file_exists($uri)) {
+    return FALSE;
+  }
+  // Prepare directory.
+  if (!file_prepare_directory($target_dir, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
+    watchdog('stage_file_proxy_private', 'Unable to create directory @directory', array('@directory' => $target_dir), WATCHDOG_WARNING);
+    return FALSE;
+  }
+  // Connect to remote host.
+  if (!($connection = ssh2_connect(variable_get('stage_file_proxy_private_ssh_host'), variable_get('stage_file_proxy_private_ssh_port')))) {
+    watchdog('stage_file_proxy_private', 'Unable to connect to remote host @host on port @port', array('@host' => variable_get('stage_file_proxy_private_ssh_host'), '@port' => variable_get('stage_file_proxy_private_ssh_port')), WATCHDOG_WARNING);
+    return FALSE;
+  }
+  // Authorize.
+  if (!ssh2_auth_password($connection, variable_get('stage_file_proxy_private_ssh_username'), variable_get('stage_file_proxy_private_ssh_password'))) {
+    watchdog('stage_file_proxy_private', 'Unable authorize user @user', array('@user' => variable_get('stage_file_proxy_private_ssh_username')), WATCHDOG_WARNING);
+    return FALSE;
+  }
+  // Transfer file from production.
+  if (!ssh2_scp_recv($connection, variable_get('stage_file_proxy_private_ssh_remote_path') . '/' . $target, drupal_realpath($uri))) {
+    watchdog('stage_file_proxy_private', 'Unable to copy file @file from @remote_path', array('@file' => $filename, '@remote_path' => variable_get('stage_file_proxy_private_ssh_remote_path') . '/' . $target), WATCHDOG_WARNING);
+    return FALSE;
   }
 }
 
@@ -71,6 +81,22 @@ function stage_file_proxy_private_download() {
  * Settings form.
  */
 function stage_file_proxy_private_settings_form($form, &$form_state) {
+  if (!($connection = ssh2_connect(variable_get('stage_file_proxy_private_ssh_host'), variable_get('stage_file_proxy_private_ssh_port')))) {
+    // Connect to remote host.
+    drupal_set_message(t('Unable to connect to remote host.'), 'error');
+  }
+  elseif (!ssh2_auth_password($connection, variable_get('stage_file_proxy_private_ssh_username'), variable_get('stage_file_proxy_private_ssh_password'))) {
+    // Authorize.
+    drupal_set_message(t('Unable to authorize user.'), 'error');
+  }
+  elseif (($sftp = ssh2_sftp($connection)) && ($data = ssh2_sftp_stat($sftp, variable_get('stage_file_proxy_private_ssh_remote_path')))) {
+    // Success.
+    drupal_set_message(t('Successfully connected to remote host.'));
+  }
+  else {
+    // Unable fo find directory.
+    drupal_set_message(t('Unable to resolve remote path.'), 'error');
+  }
   $form['stage_file_proxy_private_ssh_host'] = array(
     '#type' => 'textfield',
     '#title' => t('Host'),
@@ -95,6 +121,7 @@ function stage_file_proxy_private_settings_form($form, &$form_state) {
     '#type' => 'textfield',
     '#title' => t('Remote path'),
     '#default_value' => variable_get('stage_file_proxy_private_ssh_remote_path'),
+    '#description' => t('Do not use trailing slash'),
   );
   return system_settings_form($form);
 }
