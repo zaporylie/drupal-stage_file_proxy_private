@@ -3,8 +3,8 @@ Stage File Proxy Private
 
 **Please, do not keep passwords in variables if your env is public! Thanks ;)**
 
-Download private files form production through ssh if it doesn't exists in local
-filesystem.
+Download private file from production to development environment through ssh if 
+it doesn't exists in local filesystem (on demand).
  
 ## Requirements:
 
