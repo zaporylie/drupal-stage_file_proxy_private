@@ -1,12 +1,14 @@
 Stage File Proxy Private
 ==============================
 
-**! DEV ONLY ! Do not keep passwords in variables if your env is public!**
+**Please, do not keep passwords in variables if your env is public! Thanks ;)**
 
-Download private file form production through ssh if it doesn't exists in local
+Download private files form production through ssh if it doesn't exists in local
 filesystem.
  
 ## Requirements:
+
+* [ssh2 php library](http://php.net/manual/en/book.ssh2.php)
 
 ````
 sudo apt-get install libssh2-php
@@ -16,3 +18,7 @@ sudo /etc/init.d/apache2 restart
 ## Dependencies:
 
 * Stage File Proxy
+
+## Credits
+
+* Ny Media AS

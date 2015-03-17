@@ -1,8 +1,30 @@
 <?php
 /**
  * @file
- * Remove variables on module disable.
+ * Remove variables on module disable and add module requirements.
  */
+
+/**
+ * Implements hook_requirements().
+ */
+function stage_file_proxy_private_requirements($phase) {
+  $requirements = array();
+  // Ensure translations don't break during installation.
+  $t = get_t();
+
+  // Test cURL.
+  $ssh2_available = function_exists('ssh2_auth_password');
+  $requirements['ssh2'] = array(
+    'title' => $t('SSH2 PHP library'),
+    'value' => $ssh2_available ? $t('Enabled') : $t('Not found'),
+  );
+  if (!$ssh2_available) {
+    $requirements['ssh2']['severity'] = REQUIREMENT_ERROR;
+    $requirements['ssh2']['description'] = $t("Stage File Proxy Private requires PHP <a href='@ssh2_url'>ssh2</a> library.", array('@ssh2_url' => 'http://php.net/manual/en/book.ssh2.php'));
+  }
+
+  return $requirements;
+}
 
 /**
  * Implements hook_disable().

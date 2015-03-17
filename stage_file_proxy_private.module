@@ -8,8 +8,9 @@
  * Implements hook_menu().
  */
 function stage_file_proxy_private_menu() {
-  $items['admin/config/media/stage_file_proxy_private'] = array(
-    'title' => 'Stage File Proxy Private',
+  $items['admin/config/system/stage_file_proxy_private'] = array(
+    'title' => 'Stage File Proxy Private settings',
+    'description' => 'Administrative interface for the Stage File Proxy Private module',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('stage_file_proxy_private_settings_form'),
     'access arguments' => array('administer stage_file_proxy settings'),
@@ -79,7 +80,7 @@ function stage_file_proxy_private_download() {
     return FALSE;
   }
   // Connect to remote host.
-  if (!($connection = ssh2_connect(variable_get('stage_file_proxy_private_ssh_host'), variable_get('stage_file_proxy_private_ssh_port')))) {
+  if (!($connection = ssh2_connect(variable_get('stage_file_proxy_private_ssh_host'), variable_get('stage_file_proxy_private_ssh_port', 22)))) {
     watchdog('stage_file_proxy_private', 'Unable to connect to remote host @host on port @port', array('@host' => variable_get('stage_file_proxy_private_ssh_host'), '@port' => variable_get('stage_file_proxy_private_ssh_port')), WATCHDOG_WARNING);
     return FALSE;
   }
@@ -99,31 +100,50 @@ function stage_file_proxy_private_download() {
  * Settings form.
  */
 function stage_file_proxy_private_settings_form($form, &$form_state) {
-  if (!($connection = ssh2_connect(variable_get('stage_file_proxy_private_ssh_host'), variable_get('stage_file_proxy_private_ssh_port')))) {
+  if (!($connection = @ssh2_connect(variable_get('stage_file_proxy_private_ssh_host'), variable_get('stage_file_proxy_private_ssh_port', 22)))) {
     // Connect to remote host.
-    drupal_set_message(t('Unable to connect to remote host.'), 'error');
+    $message = t('Unable to connect to remote host.');
+    $class = 'error';
   }
-  elseif (!ssh2_auth_password($connection, variable_get('stage_file_proxy_private_ssh_username'), variable_get('stage_file_proxy_private_ssh_password'))) {
+  elseif (!@ssh2_auth_password($connection, variable_get('stage_file_proxy_private_ssh_username'), variable_get('stage_file_proxy_private_ssh_password'))) {
     // Authorize.
-    drupal_set_message(t('Unable to authorize user.'), 'error');
+    $message = t('Unable to authorize user.');
+    $class = 'error';
   }
-  elseif (($sftp = ssh2_sftp($connection)) && ($data = ssh2_sftp_stat($sftp, variable_get('stage_file_proxy_private_ssh_remote_path')))) {
+  elseif (($sftp = @ssh2_sftp($connection)) && ($data = @ssh2_sftp_stat($sftp, variable_get('stage_file_proxy_private_ssh_remote_path')))) {
     // Success.
-    drupal_set_message(t('Successfully connected to remote host.'));
+    $message = t('Successfully connected to remote host.');
+    $class = 'status';
   }
   else {
     // Unable fo find directory.
-    drupal_set_message(t('Unable to resolve remote path.'), 'error');
+    $message = t('Unable to resolve remote path.');
+    $class = 'error';
   }
+  $form['status'] = array(
+    '#type' => 'container',
+    '#attributes' => array(
+      'class' => array(
+        'messages',
+        $class,
+      ),
+    ),
+    'markup' => array(
+      '#type' => 'markup',
+      '#markup' => $message,
+    ),
+  );
   $form['stage_file_proxy_private_ssh_host'] = array(
     '#type' => 'textfield',
     '#title' => t('Host'),
     '#default_value' => variable_get('stage_file_proxy_private_ssh_host'),
+    '#description' => t('Domain name or IP address to your host. Do not use protocols, leading or trailing slashes'),
   );
   $form['stage_file_proxy_private_ssh_port'] = array(
     '#type' => 'textfield',
     '#title' => t('Port'),
-    '#default_value' => variable_get('stage_file_proxy_private_ssh_port'),
+    '#default_value' => variable_get('stage_file_proxy_private_ssh_port', 22),
+    '#description' => t('Default is 22'),
   );
   $form['stage_file_proxy_private_ssh_username'] = array(
     '#type' => 'textfield',
@@ -133,13 +153,13 @@ function stage_file_proxy_private_settings_form($form, &$form_state) {
   $form['stage_file_proxy_private_ssh_password'] = array(
     '#type' => 'password',
     '#title' => t('Password'),
-    '#default_value' => variable_get('stage_file_proxy_private_ssh_password'),
+    '#description' => t('Value of this field is hidden by default. If you want to re-save form you must type it again.'),
   );
   $form['stage_file_proxy_private_ssh_remote_path'] = array(
     '#type' => 'textfield',
     '#title' => t('Remote path'),
     '#default_value' => variable_get('stage_file_proxy_private_ssh_remote_path'),
-    '#description' => t('Do not use trailing slash'),
+    '#description' => t('Do not use trailing slash!'),
   );
   return system_settings_form($form);
 }
